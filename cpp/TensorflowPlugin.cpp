@@ -19,6 +19,7 @@
 
 #ifdef ANDROID
 #include <tensorflow/lite/c/c_api.h>
+#include <tensorflow/lite/delegates/nnapi/nnapi_delegate_c_api.h>
 #else
 #include <TensorFlowLiteC/TensorFlowLiteC.h>
 
@@ -56,6 +57,8 @@ void TensorflowPlugin::installToRuntime(jsi::Runtime& runtime,
             delegateType = Delegate::CoreML;
           } else if (delegate == "metal") {
             delegateType = Delegate::Metal;
+          } else if (delegate == "nnapi") {
+            delegateType = Delegate::NnApi;
           } else {
             delegateType = Delegate::Default;
           }
@@ -99,6 +102,12 @@ void TensorflowPlugin::installToRuntime(jsi::Runtime& runtime,
                       callInvoker->invokeAsync(
                           [=]() { promise->reject("Metal Delegate is not supported!"); });
                       return;
+                    }
+                    case Delegate::NnApi: {
+                      TfLiteNnapiDelegateOptions delegateOptions = TfLiteNnapiDelegateOptionsDefault();
+                      auto delegate = TfLiteNnapiDelegateCreate(&delegateOptions);
+                      TfLiteInterpreterOptionsAddDelegate(options, delegate);
+                      break;
                     }
                     default: {
                       // use default CPU delegate.
@@ -339,6 +348,8 @@ jsi::Value TensorflowPlugin::get(jsi::Runtime& runtime, const jsi::PropNameID& p
         return jsi::String::createFromUtf8(runtime, "core-ml");
       case Delegate::Metal:
         return jsi::String::createFromUtf8(runtime, "metal");
+      case Delegate::NnApi:
+        return jsi::String::createFromUtf8(runtime, "nnapi");
     }
   }
 
